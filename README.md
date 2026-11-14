@@ -1,221 +1,240 @@
-# PortViewer
+<div align="center">
 
-Panel web local (con **PWA instalable** y lanzador nativo para Windows) construido con **Next.js 16 (App Router)**, **React 19**, **TypeScript** y **Tailwind CSS v4** para inspeccionar en tiempo real los puertos ocupados en tu computadora, saber exactamente qué proceso y usuario los utiliza, detectar qué proyecto está corriendo, abrir servicios web en el navegador y cerrar procesos de forma segura.
+<img src="./public/portviewer-icon-192.png" alt="PortViewer Logo" width="96" height="96" />
 
----
+# ⚡ PortViewer
 
-## Tabla de contenidos
+**Inspector visual de puertos, procesos, proyectos locales y servicios web**  
+*Con soporte PWA instalable y acceso directo autoejecutable en Windows, macOS y Linux*
 
-- [Funcionalidades principales](#funcionalidades-principales)
-- [Interfaz y controles del Dashboard](#interfaz-y-controles-del-dashboard)
-- [Iconos y configuración PWA](#iconos-y-configuración-pwa)
-- [Lanzador multiplataforma y acceso directo en Escritorio](#lanzador-multiplataforma-y-acceso-directo-en-escritorio)
-- [API Routes](#api-routes)
-- [Seguridad y protecciones](#seguridad-y-protecciones)
-- [Estructura del proyecto](#estructura-del-proyecto)
-- [Scripts disponibles](#scripts-disponibles)
-- [Comportamiento en Vercel](#comportamiento-en-vercel)
+[![Next.js](https://img.shields.io/badge/Next.js-16.4.6-000000?style=for-the-badge&logo=nextdotjs&logoColor=white)](https://nextjs.org/)
+[![React](https://img.shields.io/badge/React-19.3.0-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://react.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4.3.3-0F172A?style=for-the-badge&logo=tailwindcss&logoColor=38BDF8)](https://tailwindcss.com/)
+[![PWA](https://img.shields.io/badge/PWA-Instalable-10B981?style=for-the-badge&logo=pwa&logoColor=white)](#-iconos-y-configuración-pwa)
+[![Puerto](https://img.shields.io/badge/Puerto_Local-127.0.0.1%3A4949-0EA5E9?style=for-the-badge)](#-lanzador-multiplataforma-y-acceso-directo-en-escritorio)
 
----
+[🚀 Inicio rápido](#-inicio-rápido) • [✨ Funcionalidades](#-funcionalidades-principales) • [🎨 Iconos y PWA](#-iconos-y-configuración-pwa) • [🖥️ Acceso directo OS](#%EF%B8%8F-lanzador-multiplataforma-y-acceso-directo-en-escritorio) • [🔌 API](#-api-routes) • [🛡️ Seguridad](#%EF%B8%8F-seguridad-y-protecciones)
 
-## Funcionalidades principales
-
-1. **Escaneo completo de puertos TCP y UDP en Windows**
-   - Combina `netstat -ano` para listar todos los sockets locales (`Listen`, `Bound`, `Established`, `TimeWait`, `CloseWait`, etc.) con consultas PowerShell sobre `Win32_Process`, `Get-Process` y `System.Diagnostics.FileVersionInfo`.
-   - Agrupa automáticamente interfaces duplicadas IPv4/IPv6 (`0.0.0.0` + `::` o `127.0.0.1` + `::1`) por puerto y PID, indicando si el alcance es solo `localhost` o accesible en la red local (`network`).
-
-2. **Inspección profunda de procesos**
-   - Muestra **PID**, **nombre del proceso**, **descripción del binario**, **empresa/autor**, **proceso padre** (nombre y PID), **usuario/sesión propietaria**, **uso de memoria RAM (MB)**, **tiempo de CPU**, **hora de inicio y tiempo activo (uptime)**, **título de ventana**, **ruta del ejecutable** y **línea de comandos completa**.
-
-3. **Detección automática de proyectos y frameworks**
-   - Analiza las rutas presentes en la línea de comandos del proceso y del proceso padre (subiendo desde `node_modules` o `.venv` si aplica) para localizar la raíz del proyecto mediante archivos marcadores:
-     - `package.json`: extrae nombre, versión, gestor de paquetes (`pnpm`, `yarn`, `bun`, `npm`), `scripts` y detecta el framework (`Next.js`, `Vite`, `Vite + React`, `Vite + Vue`, `Nuxt`, `Astro`, `Remix`, `NestJS`, `Create React App`, `React`, `Express`, `Fastify`, `Hono`, `Electron`).
-     - `pyproject.toml`, `manage.py`, `requirements.txt` (Python / Django).
-     - `Cargo.toml` (Rust), `go.mod` (Go), `pom.xml` / `build.gradle` (Java).
-   - Lee `.git/HEAD` para mostrar la rama Git actual del proyecto.
-
-4. **Detección inteligente de servicios Web (HTTP/HTTPS)**
-   - Sondea localmente los puertos TCP en escucha (omitiendo puertos binarios conocidos de Windows y bases de datos) para verificar si responden HTTP/HTTPS.
-   - Extrae código de estado HTTP, `<title>` de la página, `Content-Type`, cabeceras `Server` / `X-Powered-By`, redirecciones y latencia en milisegundos.
-   - Genera el enlace directo `http://localhost:<puerto>` (o `https://`) y muestra URLs de red local (LAN) cuando escucha en `0.0.0.0` o `::`.
-
-5. **Clasificación automática por categoría**
-   - **Web**: servicios con respuesta HTTP/HTTPS o el propio panel de PortViewer.
-   - **Dev**: runtimes y herramientas de desarrollo (`node`, `python`, `java`, `docker`, `ruby`, `go`, `dotnet`, `php`) o proyectos detectados.
-   - **Base de datos**: PostgreSQL (`5432`), MySQL/MariaDB (`3306`), Redis (`6379`), MongoDB (`27017`), SQL Server (`1433`), Oracle (`1521`), Elasticsearch (`9200`), etc.
-   - **Sistema**: servicios críticos de Windows (`135`, `445`, `3389`, `svchost.exe`, `System`, etc.).
-   - **Otro**: resto de procesos en escucha.
+</div>
 
 ---
 
-## Interfaz y controles del Dashboard
+> [!TIP]
+> **Puerto dedicado `4949`:** PortViewer corre por defecto en `http://127.0.0.1:4949` para no ocupar el puerto `3000` ni el `5173` mientras trabajas en tus proyectos con Next.js, Vite, React o APIs locales.
 
-- **Tarjetas KPI interactivas**: total de puertos abiertos, servicios web, proyectos detectados, conexiones activas (`Established`) y procesos únicos + tiempo de escaneo.
-- **Pestañas de filtrado**: `Todos en escucha`, `Servicios Web`, `Proyectos / Dev`, `Bases de datos`, `Sistema` y `Sockets (Raw)` (vista de tabla con todos los sockets individuales TCP/UDP).
-- **Filtros y ordenamiento**:
-  - Filtro de protocolo (`Todos`, `TCP`, `UDP`).
-  - Buscador en tiempo real por puerto, proyecto, proceso, PID, usuario, título web o línea de comandos.
-  - Ordenamiento: `Web/Dev primero`, `Puerto ↑`, `Memoria RAM ↓`, `Proyecto A-Z`, `Proceso A-Z`.
-- **Controles superiores**:
-  - `Detectar Web (HTTP)`: activa/desactiva el sondeo HTTP local.
-  - `Demo`: previsualiza datos de ejemplo sin tocar procesos reales.
-  - `Auto`: intervalo de auto-refresco (`Off`, `3s`, `5s`, `10s`, `30s`; por defecto `10s`).
-  - `Actualizar`: recarga manual inmediata.
-  - `Instalar app` / `PWA instalada`: instala o indica el estado de la Progressive Web App.
-- **Acciones por puerto y panel de detalle (`PortDetailDrawer`)**:
-  - **Abrir web** en nueva pestaña (`http://localhost:<puerto>`).
-  - **Copiar** URL, PID, ruta del proyecto, ruta del ejecutable o línea de comandos.
-  - **Abrir en VS Code** (`code <ruta>`) o **Carpeta** en el Explorador de Windows.
-  - **Detalles**: panel deslizable con toda la metadata de red, HTTP, scripts de `package.json`, proceso y peers conectados.
-  - **Cerrar**: modal de confirmación con opción **Incluir subprocesos (árbol completo `/T`)**, recomendada para servidores iniciados con `npm`, `pnpm`, `Next.js` o `Vite`.
+> [!NOTE]
+> **Modo Local vs. Vercel Cloud:** En tu computadora con Windows, PortViewer escanea tus puertos y procesos reales con control total. Cuando se despliega en **Vercel** (`VERCEL=1`), al ser un entorno serverless en la nube sin acceso a tu máquina local, cambia automáticamente a **solo lectura** con datos de demostración y un aviso informativo.
 
 ---
 
-## Iconos y configuración PWA
+## 🧭 Arquitectura y flujo visual
 
-PortViewer puede instalarse como aplicación de escritorio (Chrome / Edge) o móvil en modo `standalone` sin barra de navegador:
-
-| Archivo | Propósito | Tamaño / Detalle |
-| --- | --- | --- |
-| `app/manifest.ts` | Web App Manifest (`/manifest.webmanifest`) | `display: "standalone"`, `theme_color: "#09090b"`, `background_color: "#09090b"` |
-| `public/portviewer-icon-192.png` | Icono estándar PWA | `192×192` PNG (`purpose: "any"`) |
-| `public/portviewer-icon-512.png` | Icono alta resolución PWA | `512×512` PNG (`purpose: "any"`) |
-| `public/portviewer-icon-maskable-512.png` | Icono adaptable (maskable) | `512×512` PNG (`purpose: "maskable"`) |
-| `public/portviewer-apple-icon.png` | Apple Touch Icon | `180×180` PNG |
-| `app/favicon.ico` | Favicon e icono del acceso directo `.lnk` | Icono de escritorio/pestaña |
-| `public/portviewer-sw.js` | Service Worker minimalista | Muestra página offline si el servidor local está apagado; **no cachea `/api/`** |
-| `components/PortViewerServiceWorker.tsx` | Registro del Service Worker | Se registra en contextos seguros (`127.0.0.1`, `localhost`, HTTPS) |
-| `components/usePortViewerInstall.ts` | Hook de instalación PWA | Gestiona `beforeinstallprompt`, `appinstalled` y `display-mode: standalone` |
-| `components/icons.tsx` | Iconos vectoriales de la UI | Iconos SVG inline (`Refresh`, `Globe`, `ExternalLink`, `Folder`, `Code`, `Power`, `Copy`, `Check`, `Search`, `Info`, `Shield`, `Database`, `Terminal`, `Close`, `Alert`) |
-
-Además, [next.config.ts](next.config.ts) sirve `/portviewer-sw.js` con `Cache-Control: no-cache, no-store, must-revalidate` y `Content-Security-Policy: default-src 'self'`.
-
----
-
-## Lanzador multiplataforma y acceso directo en Escritorio
-
-PortViewer corre por defecto en **`http://127.0.0.1:4949`** para no colisionar con el puerto `3000` o `5173` de tus proyectos.
-
-### Arranque manual o en segundo plano
-
-```bash
-# Modo desarrollo interactivo en consola
-npm run dev
-
-# Lanzador automático en segundo plano (Windows, macOS y Linux)
-npm run launch
+```mermaid
+flowchart LR
+    U["🖥️ Usuario / PWA<br/>http://127.0.0.1:4949"] --> UI["📊 PortDashboard<br/>Filtros · KPIs · Drawer"]
+    UI -->|"GET /api/ports"| API["⚙️ Next.js Route Handlers"]
+    API -->|"netstat -ano + PowerShell"| OS["🪟 Sockets TCP/UDP & Procesos<br/>PID · RAM · CPU · Usuario · Padre"]
+    API -->|"package.json / pyproject / .git"| PROJ["📁 Detector de Proyectos<br/>Framework · Rama Git · Scripts"]
+    API -->|"HTTP/HTTPS Probe"| WEB["🌐 Detector Web Local<br/>Status · &lt;title&gt; · URLs LAN"]
+    UI -->|"POST /api/ports/kill · open"| GUARD{"🛡️ Guard Localhost<br/>& Procesos Críticos"}
+    GUARD -->|"Permitido"| ACT["✅ Abrir carpeta / VS Code<br/>o Cerrar PID / Árbol /T"]
+    GUARD -->|"Vercel / Remoto / Sistema"| BLOCK["⛔ 403 Protegido"]
 ```
 
-Luego abre [http://127.0.0.1:4949](http://127.0.0.1:4949).
+---
 
-### Acceso directo autoejecutable en el Escritorio (todos los sistemas)
+## 🚀 Inicio rápido
+
+```bash
+# 1. Instalar dependencias
+npm install
+
+# 2. Iniciar en modo desarrollo local (http://127.0.0.1:4949)
+npm run dev
+
+# 3. (Opcional) Crear acceso directo autoejecutable en tu Escritorio (Win / macOS / Linux)
+npm run shortcut
+```
+
+---
+
+## ✨ Funcionalidades principales
+
+| Área | Capacidad | Qué datos muestra |
+| :--- | :--- | :--- |
+| 🔍 **Escaneo TCP y UDP** | `netstat -ano` + agrupación inteligente IPv4/IPv6 | Puerto, protocolo (`TCP`/`UDP`), estado (`Listen`, `Bound`, `Established`, `TimeWait`, `CloseWait`), alcance (`localhost` vs `network` `0.0.0.0` / `::`) |
+| 🧠 **Inspección de procesos** | `Win32_Process`, `Get-Process` y `FileVersionInfo` | **PID**, **nombre**, descripción del binario, empresa/autor, **proceso padre**, **usuario/sesión**, **RAM (MB)**, **CPU (s)**, hora de inicio, **uptime**, título de ventana, ruta del ejecutable y línea de comandos |
+| 📁 **Detección de proyectos** | Analiza argumentos y sube desde `node_modules` / `.venv` | Nombre del proyecto, carpeta raíz, rama Git (`.git/HEAD`), gestor de paquetes (`pnpm`, `yarn`, `bun`, `npm`), `scripts` y framework (`Next.js`, `Vite`, `React`, `Vue`, `Nuxt`, `Astro`, `Remix`, `NestJS`, `Express`, `FastAPI`, `Hono`, `Electron`, `Python`, `Rust`, `Go`, `Java`) |
+| 🌐 **Sondeo Web (HTTP/HTTPS)** | Petición local ligera con timeout corto (`380 ms`) | Código de estado (`200`, `302`, `404`…), `<title>`, `Content-Type`, cabeceras `Server` / `X-Powered-By`, latencia (ms), enlace directo `http://localhost:<puerto>` y URLs LAN |
+| ⚡ **Acciones inmediatas** | Control desde la fila o desde el panel de detalles | **Abrir web**, **Copiar** (URL, PID, ruta, comando), **VS Code** (`code <ruta>`), **Carpeta** (Explorador), **Cerrar proceso** (individual o árbol completo `/T`) |
+
+### 🏷️ Categorías visuales en la interfaz
+
+- 🟢 **`Web`** — Servicios con respuesta HTTP/HTTPS activa o el propio panel PortViewer (`Este panel`).
+- 🔵 **`Dev`** — Runtimes y proyectos de desarrollo (`node`, `python`, `java`, `docker`, `ruby`, `go`, `dotnet`, `php`).
+- 🟣 **`Base de datos`** — PostgreSQL (`5432`), MySQL/MariaDB (`3306`), Redis (`6379`), MongoDB (`27017`), SQL Server (`1433`), Oracle (`1521`), Elasticsearch (`9200`), etc.
+- 🟡 **`Sistema`** — Servicios protegidos de Windows (`135`, `445`, `3389`, `svchost.exe`, `System`, PID `<= 4`).
+- ⚪ **`Otro`** — Cualquier otro socket o binario activo.
+
+---
+
+## 📊 Interfaz, controles y feedback visual
+
+- **🎯 5 tarjetas KPI interactivas:** clicables para filtrar al instante por *Puertos abiertos*, *Servicios Web*, *Proyectos detectados*, *Conexiones activas* (`Sockets Raw`) y *Procesos únicos* + duración del escaneo en milisegundos.
+- **🗂️ Pestañas y filtros combinables:** `Todos en escucha`, `Servicios Web`, `Proyectos / Dev`, `Bases de datos`, `Sistema` y `Sockets (Raw)` + filtro `Todos / TCP / UDP` + buscador global en tiempo real + ordenamiento (`Web/Dev primero`, `Puerto ↑`, `RAM ↓`, `Proyecto A-Z`, `Proceso A-Z`).
+- **🔄 Auto-refresco configurable:** `Off`, `3s`, `5s`, `10s` (por defecto) o `30s`, más botón **Actualizar** con indicador animado y toggles rápidos para **Detectar Web (HTTP)** y **Demo**.
+- **🪪 Badges de estado en tiempo real:**
+  - 🟢 `Local · <hostname>` con pulso activo cuando escanea tu PC.
+  - 🟡 `Vercel Cloud · Solo lectura` cuando corre en la nube.
+  - 🔵 `Modo Demo` al previsualizar datos de ejemplo.
+- **🪟 Panel lateral `PortDetailDrawer`:** muestra toda la metadata clasificada (*Servicio Web*, *Proyecto Detectado* con lista de scripts, *Datos del Proceso*, *Red y Sockets* con peers remotos conectados) y cierre rápido con `Esc`.
+- **🛑 Modal de confirmación + Toasts:** al pulsar **Cerrar**, muestra el comando exacto y permite marcar **Incluir subprocesos (árbol completo `/T`)** para evitar procesos huérfanos en `npm`/`next`/`vite`, confirmando cada acción con notificaciones toast.
+
+---
+
+## 🎨 Iconos y configuración PWA
+
+PortViewer incluye manifest, Service Worker e iconos propios para instalarse en **Chrome / Edge** como aplicación independiente (`display: "standalone"`).
+
+### 🖼️ Vista previa de iconos PWA
+
+| Icono | Archivo | Uso | Especificación |
+| :---: | :--- | :--- | :--- |
+| <img src="./public/portviewer-icon-192.png" alt="Icono 192" width="44" height="44" /> | `public/portviewer-icon-192.png` | Icono estándar PWA | `192×192` PNG (`purpose: "any"`) |
+| <img src="./public/portviewer-icon-512.png" alt="Icono 512" width="44" height="44" /> | `public/portviewer-icon-512.png` | Alta resolución & Linux `.desktop` | `512×512` PNG (`purpose: "any"`) |
+| <img src="./public/portviewer-icon-maskable-512.png" alt="Icono maskable" width="44" height="44" /> | `public/portviewer-icon-maskable-512.png` | Icono adaptable (maskable) | `512×512` PNG (`purpose: "maskable"`) |
+| <img src="./public/portviewer-apple-icon.png" alt="Apple Touch Icon" width="44" height="44" /> | `public/portviewer-apple-icon.png` | Apple Web App / iOS / macOS | `180×180` PNG |
+| — | `app/favicon.ico` | Pestaña del navegador y `.lnk` | Favicon Windows |
+
+### ⚙️ Piezas técnicas de la PWA
+
+- **`app/manifest.ts`**: expone `/manifest.webmanifest` con `theme_color: "#09090b"`, `background_color: "#09090b"` y `display: "standalone"`.
+- **`public/portviewer-sw.js`**: Service Worker minimalista (`skipWaiting`, `clients.claim`) que **nunca cachea `/api/`** ni datos sensibles de tu equipo, y muestra una página offline oscura cuando el servidor local está apagado.
+- **`next.config.ts`**: sirve `/portviewer-sw.js` con `Cache-Control: no-cache, no-store, must-revalidate` y `Content-Security-Policy: default-src 'self'`.
+- **`components/PortViewerServiceWorker.tsx`** y **`components/usePortViewerInstall.ts`**: registran el SW y habilitan el botón **Instalar app** (cambiando a **PWA instalada** en modo `standalone`).
+
+### 🧩 Catálogo de iconos vectoriales (`components/icons.tsx`)
+
+Todos los iconos de la interfaz son SVG ligeros sin dependencias externas:  
+`RefreshIcon` · `GlobeIcon` · `ExternalLinkIcon` · `FolderIcon` · `CodeIcon` · `PowerIcon` · `CopyIcon` · `CheckIcon` · `SearchIcon` · `InfoIcon` · `ShieldIcon` · `DatabaseIcon` · `TerminalIcon` · `CloseIcon` · `AlertIcon`
+
+---
+
+## 🖥️ Lanzador multiplataforma y acceso directo en Escritorio
+
+Crea un acceso directo autoejecutable en tu Escritorio para iniciar PortViewer en segundo plano (sin dejar terminales abiertas) y abrir `http://127.0.0.1:4949` con un doble clic:
 
 ```bash
 npm run shortcut
 ```
 
-El comando `npm run shortcut` ejecuta `scripts/install-shortcut.mjs` y detecta tu sistema operativo automáticamente:
+El instalador (`scripts/install-shortcut.mjs`) detecta automáticamente tu sistema operativo:
 
-- **Windows** (`scripts/Install-PortViewerShortcut.ps1` / `npm run shortcut:win`):
-  - Crea **`PortViewer.lnk`** en tu Escritorio apuntando a `scripts/Start-PortViewer.ps1`.
-  - Usa el Mutex `Local\PortViewer4949`, verifica `GET http://127.0.0.1:4949/api/health`, arranca el servidor oculto en segundo plano con Node.js 20+ guardando logs en `.portviewer/` y abre el navegador.
-- **macOS** (`scripts/install-portviewer-shortcut.sh` / `npm run shortcut:unix`):
-  - Crea la app autoejecutable **`~/Desktop/PortViewer.app`** (`Contents/MacOS/PortViewer`, `Info.plist`, icono en `Contents/Resources/`).
-  - Al hacer doble clic ejecuta `scripts/start-portviewer.sh` en segundo plano (`nohup`) sin dejar una terminal abierta, espera a `/api/health` y abre el navegador con `open`.
-- **Linux** (`scripts/install-portviewer-shortcut.sh` / `npm run shortcut:unix`):
-  - Crea **`PortViewer.desktop`** en tu carpeta de Escritorio (`xdg-user-dir DESKTOP`, `~/Desktop` o `~/Escritorio`) y lo copia en `~/.local/share/applications/PortViewer.desktop`.
-  - Incluye permisos de ejecución (`chmod 755`), marca de confianza GNOME (`gio set ... metadata::trusted true`), icono `public/portviewer-icon-512.png`, y ejecuta `scripts/start-portviewer.sh` abriendo el navegador con `xdg-open`.
+| Sistema Operativo | Script instalador | Archivo generado en Escritorio | Lanzador ejecutado |
+| :--- | :--- | :--- | :--- |
+| 🪟 **Windows** | `scripts/Install-PortViewerShortcut.ps1` (`npm run shortcut:win`) | `PortViewer.lnk` | `scripts/Start-PortViewer.ps1` (Mutex `Local\PortViewer4949`, oculto en segundo plano, logs en `.portviewer/`) |
+| 🍎 **macOS** | `scripts/install-portviewer-shortcut.sh` (`npm run shortcut:unix`) | `~/Desktop/PortViewer.app` | `scripts/start-portviewer.sh` (`nohup`, abre con `open`, sin ventana de Terminal persistente) |
+| 🐧 **Linux** | `scripts/install-portviewer-shortcut.sh` (`npm run shortcut:unix`) | `PortViewer.desktop` + `~/.local/share/applications/` | `scripts/start-portviewer.sh` (`nohup`, marca `metadata::trusted true` en GNOME, abre con `xdg-open`) |
 
-También puedes pasar `--start` (`npm run shortcut -- --start`) para crear el acceso directo y lanzarlo inmediatamente, o `--no-browser` (`npm run launch -- --no-browser`) para iniciar solo el servidor.
+> [!TIP]
+> También puedes usar `npm run shortcut -- --start` para crear el acceso directo y abrirlo de inmediato, o `npm run launch` (`--no-browser` para solo levantar el servidor en segundo plano).
 
 ---
 
-## API Routes
+## 🔌 API Routes
 
-| Ruta | Método | Descripción |
-| --- | --- | --- |
-| `/api/ports` | `GET` | Escanea puertos TCP/UDP, procesos, proyectos y servicios web. Soporta `?probe=1\|0` y `?demo=1`. |
-| `/api/ports/kill` | `POST` | Cierra un proceso por `pid` (`{ pid, processName?, includeTree? }`) usando `taskkill`. |
-| `/api/ports/open` | `POST` | Abre `targetPath` en el Explorador de Windows o VS Code (`{ targetPath, action: "explorer" \| "vscode" }`). |
-| `/api/health` | `GET` | Devuelve `{ ok: true, app: "portviewer", pid, isVercel, nodeVersion }` para el lanzador local. |
-
----
-
-## Seguridad y protecciones
-
-- **Restricción estricta a `localhost`**: `verifyLocalActionRequest` en [lib/security.ts](lib/security.ts) valida las cabeceras `Host` y `Origin` en `/api/ports/kill` y `/api/ports/open` para rechazar peticiones que no provengan de `localhost`, `127.0.0.1` o `::1`.
-- **Protección de procesos críticos**: bloquea la terminación de PID `<= 4`, procesos críticos de Windows (`System`, `Idle`, `smss.exe`, `csrss.exe`, `wininit.exe`, `services.exe`, `lsass.exe`, `winlogon.exe`, `svchost.exe`, `dwm.exe`, etc.) y del propio servidor de PortViewer (`process.pid`).
-- **Sin acceso en la nube**: todas las acciones de control devuelven `403` si `VERCEL=1`.
-- **Robots**: [app/robots.ts](app/robots.ts) deshabilita el rastreo sobre `/api/`.
+| Endpoint | Método | Parámetros / Body | Respuesta / Acción |
+| :--- | :---: | :--- | :--- |
+| `/api/ports` | `GET` | `?probe=1\|0`, `?demo=1` | Devuelve `{ runtime, entries, allSockets, stats }` con procesos, proyectos y sondeo HTTP. |
+| `/api/ports/kill` | `POST` | `{ pid, processName?, includeTree? }` | Ejecuta `taskkill /PID <pid> /F` (o `/T /F` si `includeTree: true`). |
+| `/api/ports/open` | `POST` | `{ targetPath, action: "explorer" \| "vscode" }` | Abre la carpeta del proyecto/ejecutable en el Explorador o en VS Code. |
+| `/api/health` | `GET` | — | Healthcheck rápido `{ ok: true, app: "portviewer", pid, isVercel, nodeVersion }`. |
 
 ---
 
-## Estructura del proyecto
+## 🛡️ Seguridad y protecciones
+
+- **Validación estricta de origen (`lib/security.ts`):** `verifyLocalActionRequest` rechaza cualquier petición a `/api/ports/kill` o `/api/ports/open` cuyo `Host` u `Origin` no sea `localhost`, `127.0.0.1` o `::1` (evita CSRF desde sitios externos).
+- **Lista de procesos críticos protegidos:** impide terminar PID `<= 4`, procesos esenciales de Windows (`System`, `Idle`, `smss.exe`, `csrss.exe`, `wininit.exe`, `services.exe`, `lsass.exe`, `winlogon.exe`, `svchost.exe`, `dwm.exe`, `fontdrvhost.exe`, etc.) y el propio proceso de PortViewer (`process.pid`).
+- **Bloqueo en Vercel:** cualquier acción destructiva o de sistema devuelve `403` si `VERCEL=1`.
+- **Robots (`app/robots.ts`):** bloquea el rastreo de `/api/`.
+
+---
+
+## 📁 Estructura del proyecto
+
+<details>
+<summary>Ver árbol completo de archivos</summary>
 
 ```text
 PortViewer/
 ├── app/
 │   ├── api/
-│   │   ├── health/route.ts         # Healthcheck del servidor local
+│   │   ├── health/route.ts                # Healthcheck del servidor local
 │   │   └── ports/
-│   │       ├── route.ts            # GET /api/ports
-│   │       ├── kill/route.ts       # POST /api/ports/kill
-│   │       └── open/route.ts       # POST /api/ports/open
-│   ├── favicon.ico
-│   ├── globals.css
-│   ├── layout.tsx                  # Metadata, Viewport y Apple Web App
-│   ├── manifest.ts                 # Manifest PWA
-│   ├── page.tsx                    # Entrada principal + registro SW
-│   └── robots.ts                   # Reglas para buscadores
+│   │       ├── route.ts                   # GET /api/ports
+│   │       ├── kill/route.ts              # POST /api/ports/kill
+│   │       └── open/route.ts              # POST /api/ports/open
+│   ├── favicon.ico                        # Favicon e icono .lnk
+│   ├── globals.css                        # Estilos globales y tema oscuro
+│   ├── layout.tsx                         # Metadata, Viewport y Apple Web App
+│   ├── manifest.ts                        # Web App Manifest (/manifest.webmanifest)
+│   ├── page.tsx                           # Página principal + registro SW
+│   └── robots.ts                          # Reglas robots.txt
 ├── components/
-│   ├── icons.tsx                   # Iconos SVG inline
-│   ├── port-dashboard.tsx          # Dashboard principal interactivo
-│   ├── port-detail-drawer.tsx      # Panel lateral de inspección detallada
-│   ├── PortViewerServiceWorker.tsx # Registro cliente del Service Worker
-│   └── usePortViewerInstall.ts     # Hook para instalar la PWA
+│   ├── icons.tsx                          # Iconos SVG inline
+│   ├── port-dashboard.tsx                 # Dashboard principal interactivo
+│   ├── port-detail-drawer.tsx             # Panel lateral de inspección detallada
+│   ├── PortViewerServiceWorker.tsx        # Registro cliente del Service Worker
+│   └── usePortViewerInstall.ts            # Hook de instalación PWA
 ├── lib/
-│   ├── demo-data.ts                # Datos de ejemplo para Vercel / Modo Demo
-│   ├── port-scanner.ts             # Escáner Windows + detección de proyectos + HTTP probe
-│   ├── security.ts                 # Validación localhost y procesos protegidos
-│   └── types.ts                    # Tipos TypeScript compartidos
+│   ├── demo-data.ts                       # Datos de ejemplo para Vercel / Modo Demo
+│   ├── port-scanner.ts                    # Escáner Windows + proyectos + HTTP probe
+│   ├── security.ts                        # Validación localhost y procesos protegidos
+│   └── types.ts                           # Tipos TypeScript compartidos
 ├── public/
-│   ├── portviewer-apple-icon.png
-│   ├── portviewer-icon-192.png
-│   ├── portviewer-icon-512.png
-│   ├── portviewer-icon-maskable-512.png
-│   └── portviewer-sw.js            # Service Worker
+│   ├── portviewer-apple-icon.png          # 180x180
+│   ├── portviewer-icon-192.png            # 192x192
+│   ├── portviewer-icon-512.png            # 512x512
+│   ├── portviewer-icon-maskable-512.png   # 512x512 maskable
+│   └── portviewer-sw.js                   # Service Worker
 ├── scripts/
-│   ├── install-portviewer-shortcut.sh # Acceso directo en macOS y Linux
-│   ├── install-shortcut.mjs           # Instalador multiplataforma de acceso directo
-│   ├── Install-PortViewerShortcut.ps1 # Acceso directo en Windows (.lnk)
-│   ├── start-local.mjs                # Lanzador multiplataforma en segundo plano
-│   ├── start-portviewer.sh            # Lanzador en macOS y Linux
-│   └── Start-PortViewer.ps1           # Lanzador en Windows
-├── .gitattributes
-├── next.config.ts
-└── package.json
+│   ├── install-portviewer-shortcut.sh     # Acceso directo en macOS y Linux
+│   ├── install-shortcut.mjs               # Instalador multiplataforma de acceso directo
+│   ├── Install-PortViewerShortcut.ps1     # Acceso directo en Windows (.lnk)
+│   ├── start-local.mjs                    # Lanzador multiplataforma en segundo plano
+│   ├── start-portviewer.sh                # Lanzador en macOS y Linux
+│   └── Start-PortViewer.ps1               # Lanzador en Windows
+├── .gitattributes                         # Normalización LF/CRLF para .sh/.ps1
+├── .gitignore                             # Ignora .portviewer/, .next/, node_modules/
+├── next.config.ts                         # Cabeceras SW y configuración Turbopack
+└── package.json                           # Scripts y dependencias
 ```
+
+</details>
 
 ---
 
-## Scripts disponibles
+## 📜 Scripts disponibles
 
-| Comando | Acción |
-| --- | --- |
+| Comando | Descripción |
+| :--- | :--- |
 | `npm run dev` | Inicia el servidor de desarrollo en `http://127.0.0.1:4949` |
-| `npm run dev:viewer` | Alias explícito para desarrollo en `127.0.0.1:4949` |
-| `npm run build` | Genera la compilación de producción (`next build`) |
-| `npm run start` | Inicia la compilación de producción en `http://127.0.0.1:4949` |
-| `npm run start:viewer` | Alias explícito para producción en `127.0.0.1:4949` |
+| `npm run dev:viewer` | Alias explícito para desarrollo en `http://127.0.0.1:4949` |
+| `npm run build` | Compila la versión de producción (`next build`) |
+| `npm run start` | Inicia la versión de producción en `http://127.0.0.1:4949` |
+| `npm run start:viewer` | Alias explícito para producción en `http://127.0.0.1:4949` |
 | `npm run lint` | Ejecuta ESLint (`eslint`) |
 | `npm run typecheck` | Verifica tipos con TypeScript (`tsc --noEmit`) |
-| `npm run launch` | Inicia PortViewer en segundo plano y abre el navegador (Windows, macOS y Linux) |
-| `npm run shortcut` | Crea el acceso directo autoejecutable en el Escritorio (Windows, macOS y Linux) |
+| `npm run launch` | Arranca PortViewer en segundo plano y abre el navegador (Win / macOS / Linux) |
+| `npm run shortcut` | Crea el acceso directo autoejecutable en el Escritorio (Win / macOS / Linux) |
 | `npm run shortcut:win` | Crea el acceso directo `.lnk` en Windows |
 | `npm run shortcut:unix` | Crea el acceso directo `.app` (macOS) o `.desktop` (Linux) |
 
 ---
 
-## Comportamiento en Vercel
+## ☁️ Comportamiento en Vercel
 
-Este repositorio se puede desplegar en **Vercel** para consultar la interfaz o compartir una vista previa. Sin embargo, al ejecutarse en un contenedor serverless en la nube (`VERCEL=1`), Vercel **no tiene acceso a los puertos ni a los procesos de tu computadora local**. En ese entorno, PortViewer muestra automáticamente un aviso informativo y carga datos de demostración de solo lectura.
+Este repositorio puede desplegarse directamente en **Vercel** (rama principal `master`) para mostrar la interfaz o compartir una vista previa.  
+Al correr dentro de un contenedor serverless en la nube (`VERCEL=1`), Vercel **no tiene acceso a los puertos ni procesos de tu computadora local**, por lo que PortViewer muestra automáticamente el banner de solo lectura y carga datos de demostración seguros.
