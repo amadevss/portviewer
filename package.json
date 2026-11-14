@@ -10,7 +10,10 @@
     "start:viewer": "next start -H 127.0.0.1 -p 4949",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "shortcut": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/Install-PortViewerShortcut.ps1"
+    "launch": "node scripts/start-local.mjs",
+    "shortcut": "node scripts/install-shortcut.mjs",
+    "shortcut:win": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/Install-PortViewerShortcut.ps1",
+    "shortcut:unix": "bash scripts/install-portviewer-shortcut.sh"
   },
   "dependencies": {
     "next": "16.4.6",

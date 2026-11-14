@@ -9,7 +9,7 @@ Panel web local (con **PWA instalable** y lanzador nativo para Windows) construi
 - [Funcionalidades principales](#funcionalidades-principales)
 - [Interfaz y controles del Dashboard](#interfaz-y-controles-del-dashboard)
 - [Iconos y configuración PWA](#iconos-y-configuración-pwa)
-- [Lanzador de Windows y acceso directo en Escritorio](#lanzador-de-windows-y-acceso-directo-en-escritorio)
+- [Lanzador multiplataforma y acceso directo en Escritorio](#lanzador-multiplataforma-y-acceso-directo-en-escritorio)
 - [API Routes](#api-routes)
 - [Seguridad y protecciones](#seguridad-y-protecciones)
 - [Estructura del proyecto](#estructura-del-proyecto)
@@ -92,31 +92,41 @@ Además, [next.config.ts](next.config.ts) sirve `/portviewer-sw.js` con `Cache-C
 
 ---
 
-## Lanzador de Windows y acceso directo en Escritorio
+## Lanzador multiplataforma y acceso directo en Escritorio
 
 PortViewer corre por defecto en **`http://127.0.0.1:4949`** para no colisionar con el puerto `3000` o `5173` de tus proyectos.
 
-### Arranque manual
+### Arranque manual o en segundo plano
 
 ```bash
+# Modo desarrollo interactivo en consola
 npm run dev
+
+# Lanzador automático en segundo plano (Windows, macOS y Linux)
+npm run launch
 ```
 
 Luego abre [http://127.0.0.1:4949](http://127.0.0.1:4949).
 
-### Acceso directo en el Escritorio (`PortViewer.lnk`)
+### Acceso directo autoejecutable en el Escritorio (todos los sistemas)
 
 ```bash
 npm run shortcut
 ```
 
-- Ejecuta `scripts/Install-PortViewerShortcut.ps1` y crea `PortViewer.lnk` en tu Escritorio apuntando a `scripts/Start-PortViewer.ps1`.
-- Al abrir `PortViewer.lnk`:
-  1. Adquiere el Mutex `Local\PortViewer4949` para evitar arranques duplicados.
-  2. Comprueba `GET http://127.0.0.1:4949/api/health`.
-  3. Si no está corriendo, busca `node.exe` (Node.js 20 o superior) e inicia `next dev -H 127.0.0.1 -p 4949` oculto en segundo plano.
-  4. Guarda los logs en `.portviewer/launcher.log` y `.portviewer/launcher-error.log` (carpeta ignorada en `.gitignore`).
-  5. Abre automáticamente `http://127.0.0.1:4949` en tu navegador (puedes pasar `-NoBrowser` al script si solo deseas levantar el servidor).
+El comando `npm run shortcut` ejecuta `scripts/install-shortcut.mjs` y detecta tu sistema operativo automáticamente:
+
+- **Windows** (`scripts/Install-PortViewerShortcut.ps1` / `npm run shortcut:win`):
+  - Crea **`PortViewer.lnk`** en tu Escritorio apuntando a `scripts/Start-PortViewer.ps1`.
+  - Usa el Mutex `Local\PortViewer4949`, verifica `GET http://127.0.0.1:4949/api/health`, arranca el servidor oculto en segundo plano con Node.js 20+ guardando logs en `.portviewer/` y abre el navegador.
+- **macOS** (`scripts/install-portviewer-shortcut.sh` / `npm run shortcut:unix`):
+  - Crea la app autoejecutable **`~/Desktop/PortViewer.app`** (`Contents/MacOS/PortViewer`, `Info.plist`, icono en `Contents/Resources/`).
+  - Al hacer doble clic ejecuta `scripts/start-portviewer.sh` en segundo plano (`nohup`) sin dejar una terminal abierta, espera a `/api/health` y abre el navegador con `open`.
+- **Linux** (`scripts/install-portviewer-shortcut.sh` / `npm run shortcut:unix`):
+  - Crea **`PortViewer.desktop`** en tu carpeta de Escritorio (`xdg-user-dir DESKTOP`, `~/Desktop` o `~/Escritorio`) y lo copia en `~/.local/share/applications/PortViewer.desktop`.
+  - Incluye permisos de ejecución (`chmod 755`), marca de confianza GNOME (`gio set ... metadata::trusted true`), icono `public/portviewer-icon-512.png`, y ejecuta `scripts/start-portviewer.sh` abriendo el navegador con `xdg-open`.
+
+También puedes pasar `--start` (`npm run shortcut -- --start`) para crear el acceso directo y lanzarlo inmediatamente, o `--no-browser` (`npm run launch -- --no-browser`) para iniciar solo el servidor.
 
 ---
 
@@ -175,8 +185,13 @@ PortViewer/
 │   ├── portviewer-icon-maskable-512.png
 │   └── portviewer-sw.js            # Service Worker
 ├── scripts/
-│   ├── Install-PortViewerShortcut.ps1
-│   └── Start-PortViewer.ps1
+│   ├── install-portviewer-shortcut.sh # Acceso directo en macOS y Linux
+│   ├── install-shortcut.mjs           # Instalador multiplataforma de acceso directo
+│   ├── Install-PortViewerShortcut.ps1 # Acceso directo en Windows (.lnk)
+│   ├── start-local.mjs                # Lanzador multiplataforma en segundo plano
+│   ├── start-portviewer.sh            # Lanzador en macOS y Linux
+│   └── Start-PortViewer.ps1           # Lanzador en Windows
+├── .gitattributes
 ├── next.config.ts
 └── package.json
 ```
@@ -190,11 +205,14 @@ PortViewer/
 | `npm run dev` | Inicia el servidor de desarrollo en `http://127.0.0.1:4949` |
 | `npm run dev:viewer` | Alias explícito para desarrollo en `127.0.0.1:4949` |
 | `npm run build` | Genera la compilación de producción (`next build`) |
-| `npm run start` | Inicia la compilación de producción en `127.0.0.1:4949` |
+| `npm run start` | Inicia la compilación de producción en `http://127.0.0.1:4949` |
 | `npm run start:viewer` | Alias explícito para producción en `127.0.0.1:4949` |
 | `npm run lint` | Ejecuta ESLint (`eslint`) |
 | `npm run typecheck` | Verifica tipos con TypeScript (`tsc --noEmit`) |
-| `npm run shortcut` | Crea el acceso directo `PortViewer.lnk` en el Escritorio |
+| `npm run launch` | Inicia PortViewer en segundo plano y abre el navegador (Windows, macOS y Linux) |
+| `npm run shortcut` | Crea el acceso directo autoejecutable en el Escritorio (Windows, macOS y Linux) |
+| `npm run shortcut:win` | Crea el acceso directo `.lnk` en Windows |
+| `npm run shortcut:unix` | Crea el acceso directo `.app` (macOS) o `.desktop` (Linux) |
 
 ---
 
