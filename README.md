@@ -1,36 +1,38 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# PortViewer
 
-## Getting Started
+Panel web local (con soporte PWA y lanzador en Windows) construido con **Next.js (App Router)** para visualizar qué puertos están ocupados en tu computadora, qué proceso y usuario los utiliza, qué proyecto está corriendo y abrir enlaces web o cerrar procesos rápidamente.
 
-First, run the development server:
+## Características
+
+- **Escaneo completo de puertos TCP/UDP** (`netstat -ano` + PowerShell `Win32_Process`, `Get-Process` y `FileVersionInfo`).
+- **Información detallada del proceso**: PID, proceso padre, usuario/sesión, ruta del ejecutable, línea de comandos completa, uso de RAM, tiempo de CPU, hora de inicio y tiempo activo.
+- **Detección automática de proyectos**: identifica la carpeta raíz del proyecto y lee `package.json` / `pyproject.toml` / `Cargo.toml` / `go.mod` / `.git/HEAD` para mostrar nombre, framework (`Next.js`, `Vite`, `React`, `Express`, `FastAPI`, etc.), rama Git y scripts.
+- **Detección de servicios web (HTTP/HTTPS)**: sondea los puertos locales en escucha para mostrar código de estado, `<title>`, cabeceras (`Server`, `X-Powered-By`), latencia y un botón directo para abrir `http://localhost:<puerto>` (y la IP de red local si escucha en `0.0.0.0`).
+- **PWA instalable**: incluye `app/manifest.ts`, iconos en `public/`, Service Worker (`public/portviewer-sw.js`) sin caché de datos privados y botón **Instalar app** en el encabezado.
+- **Lanzador y acceso directo en Windows**: arranca en segundo plano en `http://127.0.0.1:4949` sin colisionar con el puerto `3000`.
+- **Protecciones de seguridad**:
+  - Bloquea peticiones de control (`kill`, `open`) que no provengan de `localhost`.
+  - Protege procesos críticos de Windows y el propio servidor de PortViewer.
+
+## Uso en local (Windows)
+
+Inicia el servidor local en `http://127.0.0.1:4949`:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Acceso directo en el Escritorio (estilo `cursordev`)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Para iniciar PortViewer en segundo plano con un doble clic desde tu Escritorio:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run shortcut
+```
 
-## Learn More
+Esto crea `PortViewer.lnk` en tu Escritorio apuntando a `scripts/Start-PortViewer.ps1`.
 
-To learn more about Next.js, take a look at the following resources:
+## Despliegue en Vercel
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Este repositorio está preparado para desplegarse en Vercel.  
+Cuando se ejecuta en Vercel (`VERCEL=1`), al tratarse de un entorno serverless en la nube sin acceso a tu computadora local, PortViewer muestra automáticamente un aviso informativo y una vista de demostración de solo lectura.

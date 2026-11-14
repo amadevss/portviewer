@@ -3,10 +3,14 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -H 127.0.0.1 -p 4949",
+    "dev:viewer": "next dev -H 127.0.0.1 -p 4949",
     "build": "next build",
-    "start": "next start",
-    "lint": "eslint"
+    "start": "next start -H 127.0.0.1 -p 4949",
+    "start:viewer": "next start -H 127.0.0.1 -p 4949",
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "shortcut": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/Install-PortViewerShortcut.ps1"
   },
   "dependencies": {
     "next": "16.4.6",
